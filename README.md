@@ -439,8 +439,22 @@ Di [console.clever-cloud.com](https://console.clever-cloud.com) → **Create** �
 **2. Tambahkan MySQL add-on**
 
 Pada aplikasi → **Add-ons** → **Add an add-on** → **MySQL**.
-Variabel `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
-terisi otomatis oleh add-on.
+
+Add-on **tidak** mengisi `DB_HOST` / `DB_DATABASE` / `DB_USERNAME`. Ia menyuntikkan
+variabel berawalan `MYSQL_ADDON_`:
+
+| Variabel add-on | Isi |
+| --- | --- |
+| `MYSQL_ADDON_HOST` | host database |
+| `MYSQL_ADDON_PORT` | port database |
+| `MYSQL_ADDON_DB` | nama database |
+| `MYSQL_ADDON_USER` | user database |
+| `MYSQL_ADDON_PASSWORD` | password database |
+| `MYSQL_ADDON_ROLE` | peran kredensial |
+
+`config/database.php` sudah membaca `MYSQL_ADDON_*` sebagai cadangan bila `DB_*`
+tidak ada, sehingga tidak perlu menyalin nilainya secara manual. Di lokal `DB_*`
+tetap dipakai, jadi satu berkas konfigurasi berlaku untuk dua lingkungan.
 
 **3. Isi environment variables**
 
@@ -453,17 +467,33 @@ terisi otomatis oleh add-on.
 | `APP_URL` | `https://<app-anda>.cleverapps.io` |
 | `APP_LOCALE` | `id` |
 | `LOG_CHANNEL` | `stderr` |
+| `CC_PHP_VERSION` | `8.2` |
 | `CC_WEBROOT` | `/public` |
-| `CC_PRE_RUN_HOOK` | `php artisan config:clear && php artisan migrate --force` |
+| `CC_PRE_RUN_HOOK` | `php artisan config:cache && php artisan migrate --force` |
+| `CC_HEALTH_CHECK_PATH` | `/api/v1/health` |
 
-`CC_WEBROOT=/public` wajib. Tanpa itu, Clever Cloud menyajikan akar repositori dan
-`.env` bisa ikut terbaca. Berkas `.clever.cloud/php.json` sudah menyimpan
-`{"webroot": "/public"}` sebagai lapisan pengaman kedua.
+Catatan tiap baris:
+
+- `CC_WEBROOT=/public` wajib. Tanpa itu Clever Cloud menyajikan akar repositori,
+  bukan direktori `public/`, sehingga aplikasi tidak dapat diakses.
+- `CC_PHP_VERSION` dipatok ke `8.2` agar sama dengan versi pengembangan
+  (`8.2.12`). Tanpa itu Clever Cloud memakai versi PHP default yang lebih baru.
+  Nilainya harus berbentuk `8` atau `8.2`, bukan `8.2.12`.
+- `CC_PRE_RUN_HOOK` berjalan setelah build selesai dan sebelum aplikasi menerima
+  trafik — saat itu variabel add-on sudah tersedia, jadi migrasi aman dijalankan
+  di sini. `config:cache` juga diletakkan di sini, bukan di hook build, karena
+  nilainya perlu membaca kredensial database yang baru ada pada tahap ini.
+- `CC_HEALTH_CHECK_PATH` membuat health check Clever Cloud menembak endpoint
+  aplikasi, bukan halaman dokumentasi.
+- `LOG_CHANNEL=stderr` membuat log Laravel muncul di tab **Logs** Clever Cloud.
 
 **4. Deploy**
 
+Repositori sudah terhubung ke GitHub, jadi setiap `git push` ke `main`
+memicu build dan deploy otomatis:
+
 ```bash
-git push clever main
+git push origin main
 ```
 
 **5. Isi data awal** (sekali saja, dari tab **Console** Clever Cloud)
@@ -472,12 +502,19 @@ git push clever main
 php artisan db:seed --force
 ```
 
+Seeder bersifat idempoten (`updateOrCreate`), jadi menjalankannya dua kali tidak
+menggandakan data.
+
 **6. Verifikasi**
 
 ```bash
 curl https://<app-anda>.cleverapps.io/api/v1/health
 curl https://<app-anda>.cleverapps.io/docs/api
+curl -o /dev/null -w "%{http_code}\n" https://<app-anda>.cleverapps.io/
 ```
+
+Tiga hal yang diperiksa: health mengembalikan `200` dengan `{"status":"ok"}`,
+dokumentasi terbuka tanpa 403, dan `/` membalas `302` ke `/docs/api`.
 
 ---
 

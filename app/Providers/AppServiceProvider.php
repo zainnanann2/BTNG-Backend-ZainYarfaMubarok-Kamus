@@ -6,7 +6,6 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -38,8 +37,8 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        // Akar aplikasi diarahkan ke dokumentasi agar tidak menampilkan
-        // halaman sambutan bawaan Laravel.
-        Route::get('/', fn () => redirect('/docs/api'));
+        // Pengalihan "/" ke dokumentasi didefinisikan di routes/web.php.
+        // Rute tidak boleh didaftarkan dari provider: berkas rute dimuat
+        // setelah provider di-boot, sehingga rute di sini akan tertimpa.
     }
 }
