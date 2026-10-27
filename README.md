@@ -25,6 +25,7 @@ dokumentasi API interaktif.
 - [Koleksi Postman](#koleksi-postman)
 - [Pengujian](#pengujian)
 - [Deploy ke Clever Cloud](#deploy-ke-clever-cloud)
+- [Deploy ke Railway](#deploy-ke-railway)
 - [Struktur Proyek](#struktur-proyek)
 
 ---
@@ -519,6 +520,107 @@ curl -o /dev/null -w "%{http_code}\n" https://<app-anda>.cleverapps.io/
 
 Tiga hal yang diperiksa: health mengembalikan `200` dengan `{"status":"ok"}`,
 dokumentasi terbuka tanpa 403, dan `/` membalas `302` ke `/docs/api`.
+
+---
+
+## Deploy ke Railway
+
+Rubrik tugas mengizinkan layanan cloud selain Clever Cloud (Railway, Render,
+Fly.io). Berkas `railway.json` di akar repositori sudah menyiapkan seluruh
+kebutuhan deploy, jadi tidak ada Dockerfile dan tidak ada konfigurasi manual
+yang rumit.
+
+Railway membangun aplikasi ini dengan [Railpack](https://railpack.com/languages/php),
+yang mendeteksi Laravel lewat keberadaan berkas `artisan` lalu secara otomatis:
+
+- memasang dependensi Composer
+- menetapkan document root ke `/app/public`
+- membuat direktori `storage` dapat ditulis
+- menjalankan server FrankenPHP pada port dari variabel `PORT`
+
+**1. Buat proyek dan layanan database**
+
+1. Buka [railway.com](https://railway.com) → **New Project** → **Deploy MySQL**.
+   Tunggu sampai layanan MySQL selesai dibuat.
+2. Pada kanvas yang sama, klik **Create** → **GitHub Repo** → pilih
+   `Knowll322/BTNG-Backend-ZainYarfaMubarok-Kamus`.
+
+**2. Isi environment variables**
+
+Buka layanan aplikasi (bukan MySQL) → tab **Variables** → tambahkan:
+
+| Variabel | Nilai |
+| --- | --- |
+| `APP_NAME` | `Kamus Bahasa Daerah API` |
+| `APP_ENV` | `production` |
+| `APP_DEBUG` | `false` |
+| `APP_KEY` | hasil `php artisan key:generate --show` di lokal |
+| `APP_LOCALE` | `id` |
+| `LOG_CHANNEL` | `stderr` |
+| `DB_CONNECTION` | `mysql` |
+
+`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, dan `DB_PASSWORD` **tidak
+perlu diisi manual**. `config/database.php` sudah membaca variabel milik layanan
+MySQL Railway (`MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`,
+`MYSQLPASSWORD`) sebagai cadangan.
+
+Kalau ingin lebih eksplisit, Anda bisa mengisinya dengan *reference variable*
+agar nilainya selalu mengikuti layanan MySQL:
+
+```
+DB_HOST     = ${{MySQL.MYSQLHOST}}
+DB_PORT     = ${{MySQL.MYSQLPORT}}
+DB_DATABASE = ${{MySQL.MYSQLDATABASE}}
+DB_USERNAME = ${{MySQL.MYSQLUSER}}
+DB_PASSWORD = ${{MySQL.MYSQLPASSWORD}}
+```
+
+Gunakan `MYSQLHOST` (host privat), bukan `MYSQL_PUBLIC_HOST`, karena aplikasi dan
+database berada dalam satu proyek Railway.
+
+**3. Deploy**
+
+Railway langsung membangun begitu repositori terhubung. Setelah itu setiap
+`git push` ke `main` memicu deploy baru secara otomatis.
+
+**4. Migrasi dan data awal**
+
+`railway.json` sudah menjalankan keduanya otomatis lewat `preDeployCommand`:
+
+```
+php artisan config:clear && php artisan migrate --force && php artisan db:seed --force
+```
+
+Ada dua hal yang perlu dipahami di sini:
+
+- `config:clear` **wajib** dan bukan sekadar formalitas. Saat build, Railpack
+  menjalankan `php artisan config:cache`, sehingga nilai konfigurasi — termasuk
+  `APP_KEY` dan kredensial database — ikut terkunci ke dalam
+  `bootstrap/cache/config.php` pada saat itu. Variabel lingkungan yang baru ada
+  saat runtime tidak akan terbaca selama cache itu masih ada. Menghapusnya di
+  tahap pre-deploy membuat aplikasi membaca variabel yang benar.
+- Perintah pre-deploy berjalan setiap kali deploy, jadi seeder harus idempoten.
+  Seeder di proyek ini memakai `updateOrCreate`, sehingga data tidak tergandakan.
+
+**5. Buka domain publik**
+
+Layanan aplikasi → **Settings** → **Networking** → **Generate Domain**.
+Salin domain yang muncul (bentuknya `<nama>.up.railway.app`).
+
+**6. Verifikasi**
+
+```bash
+curl https://<domain-anda>.up.railway.app/api/v1/health
+curl -o /dev/null -w "%{http_code}\n" https://<domain-anda>.up.railway.app/docs/api
+curl -o /dev/null -w "%{http_code}\n" https://<domain-anda>.up.railway.app/
+```
+
+Yang diharapkan: health `200` dengan `{"status":"ok"}`, dokumentasi `200`, dan
+`/` membalas `302` ke `/docs/api`.
+
+Health check Railway juga sudah diarahkan ke `/api/v1/health` lewat
+`railway.json`, sehingga deploy dianggap gagal kalau aplikasi tidak benar-benar
+hidup.
 
 ---
 
