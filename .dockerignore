@@ -1,0 +1,24 @@
+# Jangan pernah ikutkan kredensial ke dalam image.
+.env
+.env.*
+!.env.example
+
+# Tidak dibutuhkan di server
+.git
+.gitignore
+.github
+node_modules
+vendor
+
+# Berkas pengembangan dan hasil uji
+tests
+phpunit.xml
+.phpunit.result.cache
+.phpunit.cache
+
+# Berkas lokal
+*.log
+.DS_Store
+Thumbs.db
+.idea
+.vscode
