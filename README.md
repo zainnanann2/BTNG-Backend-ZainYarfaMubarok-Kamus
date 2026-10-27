@@ -476,6 +476,10 @@ Catatan tiap baris:
 
 - `CC_WEBROOT=/public` wajib. Tanpa itu Clever Cloud menyajikan akar repositori,
   bukan direktori `public/`, sehingga aplikasi tidak dapat diakses.
+  Berkas `.clever.cloud/php.json` juga disertakan dengan isi
+  `{"webroot": "/public"}` sebagai lapisan kedua. Berkas itu tidak disebut dalam
+  dokumentasi resmi Clever Cloud — mekanisme yang terdokumentasi adalah
+  `CC_WEBROOT` — tetapi tetap disertakan karena diminta pada ketentuan tugas.
 - `CC_PHP_VERSION` dipatok ke `8.2` agar sama dengan versi pengembangan
   (`8.2.12`). Tanpa itu Clever Cloud memakai versi PHP default yang lebih baru.
   Nilainya harus berbentuk `8` atau `8.2`, bukan `8.2.12`.
