@@ -199,7 +199,7 @@ pembacaan tanpa perlu memeriksa bentuk respons.
 
 ```bash
 # 1. Ambil kode
-git clone https://github.com/Knowll322/BTNG-Backend-ZainYarfaMubarok-Kamus.git
+git clone https://github.com/zainnanann2/BTNG-Backend-ZainYarfaMubarok-Kamus.git
 cd BTNG-Backend-ZainYarfaMubarok-Kamus
 
 # 2. Pasang dependensi
@@ -543,7 +543,7 @@ yang mendeteksi Laravel lewat keberadaan berkas `artisan` lalu secara otomatis:
 1. Buka [railway.com](https://railway.com) → **New Project** → **Deploy MySQL**.
    Tunggu sampai layanan MySQL selesai dibuat.
 2. Pada kanvas yang sama, klik **Create** → **GitHub Repo** → pilih
-   `Knowll322/BTNG-Backend-ZainYarfaMubarok-Kamus`.
+   `zainnanann2/BTNG-Backend-ZainYarfaMubarok-Kamus`.
 
 **2. Isi environment variables**
 
